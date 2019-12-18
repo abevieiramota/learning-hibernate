@@ -2,36 +2,66 @@ package br.abevieiramota.learning_hibernate;
 
 import java.util.List;
 
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.Persistence;
 import javax.persistence.Query;
+
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.boot.MetadataSources;
+import org.hibernate.boot.registry.StandardServiceRegistry;
+import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 
 import br.abevieiramota.learning_hibernate.model.User;
 
 public class App {
-	private static class EMF {
+	private static class SF {
 
-		private static final EntityManagerFactory ENTITY_MANAGER_FACTORY = Persistence
-				.createEntityManagerFactory("hello_world");
+		private static final SessionFactory SESSION_FACTORY = buildSessionFactory();
 
-		public static EntityManager buildManager() {
-			return ENTITY_MANAGER_FACTORY.createEntityManager();
+		private static final SessionFactory buildSessionFactory() {
+			final StandardServiceRegistry registry = new StandardServiceRegistryBuilder().configure().build();
+			try {
+				return new MetadataSources(registry).buildMetadata().buildSessionFactory();
+			} catch (Exception ex) {
+				StandardServiceRegistryBuilder.destroy(registry);
+				throw ex;
+			}
+		}
+
+		public static Session openSession() {
+			return SESSION_FACTORY.openSession();
 		}
 
 	}
 
 	public static void main(String[] args) {
+
+		Session session = SF.openSession();
 		
-		EntityManager manager = EMF.buildManager();
+		session.beginTransaction();
 		
-		Query q = manager.createQuery("from User");
+		User uNew = new User();
+		uNew.setId(1000);
+		uNew.setName("Hibernate in action");
 		
+		session.save(uNew);
+		
+		uNew.setName("Hibernate in action [DIRTY]");
+		
+		session.getTransaction().commit();
+		
+		session.close();
+		
+		session = SF.openSession();
+
+		Query q = session.createQuery("from User");
+
 		@SuppressWarnings("unchecked")
 		List<User> users = q.getResultList();
-		
-		for(User u: users) {
-			System.out.println(u);
+
+		for (User u : users) {
+			System.out.println("Nome: "+ u);
 		}
+		
+		session.close();
 	}
 }
